@@ -13,17 +13,23 @@ print("Status:", r.status_code)
 
 soup = BeautifulSoup(r.text, "html.parser")
 
-items = soup.select(".item")
+items = soup.select("li")
 
 print("Items found:", len(items))
 
-if items:
-    first = items[0]
-    title = first.select_one(".item_name").text.strip()
-    link = "https://www.ragtag.jp" + first.select_one("a")["href"]
+for item in items[:5]:
+    a = item.find("a")
+    if not a:
+        continue
 
-    message = f"🔥 Ragtag New Item\n{title}\n{link}"
+    title = a.get_text(strip=True)
+    link = a["href"]
 
-    print("Sending to Discord:", title)
+    if "/item/" in link:
+        url = "https://www.ragtag.jp" + link
+        message = f"🔥 Ragtag Item\n{title}\n{url}"
 
-    requests.post(WEBHOOK, json={"content": message})
+        print("Sending:", title)
+
+        requests.post(WEBHOOK, json={"content": message})
+        break
