@@ -1,0 +1,14 @@
+name: Ragtag Satisfy Checker
+
+on:
+  workflow_dispatch:
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Discord notification
+        run: |
+          curl -H "Content-Type: application/json" \
+          -d '{"content":"GitHub → Discord 通知成功"}' \
+          "${{ secrets.DISCORD_WEBHOOK_URL }}"
