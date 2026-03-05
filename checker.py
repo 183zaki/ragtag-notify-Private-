@@ -18,6 +18,9 @@ def load_seen() -> set[str]:
         return set(data.get("ids", []))
     except FileNotFoundError:
         return set()
+    except Exception as e:
+        print("Failed to load seen.json:", e)
+        return set()
 
 
 def save_seen(ids: set[str]) -> None:
@@ -31,7 +34,6 @@ def save_seen(ids: set[str]) -> None:
 
 
 def extract_item_id(href: str) -> str | None:
-    # 例: /item/1234567890123/
     m = re.search(r"/item/(\d+)", href)
     return m.group(1) if m else None
 
@@ -39,13 +41,17 @@ def extract_item_id(href: str) -> str | None:
 def main():
     print("Start Ragtag checker")
 
-    r = requests.get(SEARCH_URL, timeout=20, headers={"User-Agent": "Mozilla/5.0"})
+    r = requests.get(
+        SEARCH_URL,
+        timeout=20,
+        headers={"User-Agent": "Mozilla/5.0"},
+    )
     print("Status:", r.status_code)
 
     soup = BeautifulSoup(r.text, "html.parser")
 
-    # 検索結果から item リンクを拾う
-    item_links = []
+    # /item/ を含むリンクを収集
+    found = []
     for a in soup.select('a[href*="/item/"]'):
         href = a.get("href")
         if not href:
@@ -53,27 +59,27 @@ def main():
         item_id = extract_item_id(href)
         if not item_id:
             continue
-        url = "https://www.ragtag.jp" + href
         title = a.get_text(" ", strip=True) or "Satisfy item"
-        item_links.append((item_id, title, url))
+        url = "https://www.ragtag.jp" + href
+        found.append((item_id, title, url))
 
-    # 重複除去（同一 item_id）
+    # item_id でユニーク化
     unique = {}
-    for item_id, title, url in item_links:
+    for item_id, title, url in found:
         unique[item_id] = (title, url)
 
     print("Unique item links:", len(unique))
 
     seen = load_seen()
     current_ids = set(unique.keys())
-
     new_ids = sorted(current_ids - seen)
+
     print("New items:", len(new_ids))
 
-    # seen を更新（通知の有無に関係なく最新を保存）
+    # seen.json を常に最新化（初回はここで記録するだけ）
     save_seen(current_ids)
 
-    # 新規だけ通知（最大5件まで）
+    # 新規だけ通知（最大5件）
     for item_id in new_ids[:5]:
         title, url = unique[item_id]
         msg = f"🆕 Satisfy 新着\n{title}\n{url}"
