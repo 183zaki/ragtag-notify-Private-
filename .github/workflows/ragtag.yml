@@ -1,14 +1,26 @@
 name: Ragtag Satisfy Checker
 
 on:
+  schedule:
+    - cron: '*/30 * * * *'
   workflow_dispatch:
 
 jobs:
-  notify:
+  check:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Send Discord notification
-        run: |
-          curl -H "Content-Type: application/json" \
-          -d '{"content":"GitHub → Discord 通知成功"}' \
-          "${{ secrets.DISCORD_WEBHOOK_URL }}"
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install packages
+        run: pip install -r requirements.txt
+
+      - name: Run checker
+        run: python checker.py
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
